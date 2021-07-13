@@ -9,10 +9,18 @@ using System.IO;
 using System.Linq;
 using System.Text;
 
+#if NETSTANDARD2_1_OR_GREATER
+using ReadOnlyByteSpan = System.ReadOnlySpan<byte>;
+using ByteSpan = System.Span<byte>;
+#else
+using ReadOnlyByteSpan = Gallagher.LibAsn.Shims.ReadOnlySpan<byte>;
+using ByteSpan = Gallagher.LibAsn.Shims.Span<byte>;
+#endif
+
 #nullable enable
 
 /// <summary>This knows how to serialize and deserialize ASN.1 data</summary>
-namespace Gallagher.Security.LibAsn
+namespace Gallagher.LibAsn
 {
     public enum AsnUniversalType : byte
     {
@@ -444,11 +452,16 @@ namespace Gallagher.Security.LibAsn
             }
         }
 
-        public static AsnObject? DerDecode(byte[] data) => DerDecode(new ReadOnlySpan<byte>(data));
+#if NETSTANDARD2_1_OR_GREATER
+        public static AsnObject? DerDecode(System.ReadOnlySpan<byte> data) => DerDecodeInternal(data);
+#endif
+        public static AsnObject? DerDecode(ArraySegment<byte> data) => DerDecodeInternal(new ReadOnlyByteSpan(data.Array, data.Offset, data.Count));
 
-        public static AsnObject? DerDecode(byte[] data, int rangeOffset, int rangeLength) => DerDecode(new ReadOnlySpan<byte>(data, rangeOffset, rangeLength));
+        public static AsnObject? DerDecode(byte[] data) => DerDecodeInternal(new ReadOnlyByteSpan(data));
 
-        public static AsnObject? DerDecode(ReadOnlySpan<byte> data)
+        public static AsnObject? DerDecode(byte[] data, int rangeOffset, int rangeLength) => DerDecodeInternal(new ReadOnlyByteSpan(data, rangeOffset, rangeLength));
+
+        private static AsnObject? DerDecodeInternal(ReadOnlyByteSpan data)
         {
             if (data.Length < 2)
             { // too short, we must always have at least one byte tag and one byte length
@@ -470,7 +483,7 @@ namespace Gallagher.Security.LibAsn
                     int remainingStart = offset;
                     int remainingLength = data.Length - offset;
 
-                    if (DerDecode(data.Slice(remainingStart, remainingLength)) is AsnObject child)
+                    if (DerDecodeInternal(data.Slice(remainingStart, remainingLength)) is AsnObject child)
                     {
                         children.Add(child);
                         offset += child.OuterLength;
@@ -508,6 +521,7 @@ namespace Gallagher.Security.LibAsn
             return buffer;
         }
 
+        // TODO it'd be nice to have this write to a Span or ArraySegment, not just buffer, offset, length
         public int DerEncodeTo(byte[] buffer, int rangeOffset, int rangeLength)
         {
             if (m_contents == null)
@@ -606,7 +620,28 @@ namespace Gallagher.Security.LibAsn
             }
         }
 
-        private static (byte RawTag, int ContentsLen, int HeaderLen) DecodeHeader(ReadOnlySpan<byte> data)
+        struct DecodedHeader
+        {
+            public readonly byte RawTag;
+            public readonly int ContentsLen;
+            public readonly int HeaderLen;
+
+            internal DecodedHeader(byte rawTag, int contentsLen, int headerLen)
+            {
+                RawTag = rawTag;
+                ContentsLen = contentsLen;
+                HeaderLen = headerLen;
+            }
+
+            public void Deconstruct(out byte rawTag, out int contentsLen, out int headerLen)
+            {
+                rawTag = RawTag;
+                contentsLen = ContentsLen;
+                headerLen = HeaderLen;
+            }
+        }
+
+        private static DecodedHeader DecodeHeader(ReadOnlyByteSpan data)
         {
             byte rawTag = data[0];
             byte firstLengthByte = data[1];
@@ -632,7 +667,7 @@ namespace Gallagher.Security.LibAsn
                 }
                 headerLen = 2 + bytesOfLength;
             }
-            return (rawTag, contentsLen, headerLen);
+            return new DecodedHeader(rawTag, contentsLen, headerLen);
         }
 
         // Thanks BouncyCastle (under Apache2 license)

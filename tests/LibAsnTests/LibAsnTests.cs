@@ -9,7 +9,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 #nullable enable
 
-namespace Gallagher.Security.LibAsn
+namespace Gallagher.LibAsn
 {
     [TestClass]
     public class LibAsnTests

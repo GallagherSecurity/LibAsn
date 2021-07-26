@@ -1,4 +1,7 @@
-﻿using System;
+﻿//
+// Copyright Gallagher Group Ltd 2021
+//
+using System;
 
 #if !NETSTANDARD2_1_OR_GREATER
 

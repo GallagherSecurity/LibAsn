@@ -137,6 +137,19 @@ namespace Gallagher.LibAsn
         }
 
         [TestMethod]
+        public void EncodeSimpleSequenceOfPoints()
+        {
+            // Point with only an x coordinate of 9 like so (30 means SEQUENCE here):
+            var reference = new byte[] { 0x30, 0x06, 0x02, 0x01, 0x09, 0x02, 0x01, 0x0a };
+            var asn = AsnObject.Sequence(
+                AsnObject.Integer(new byte[] { 9 }),
+                AsnObject.Integer(new byte[] { 10 }));
+
+            var result = asn.DerEncode();
+            CollectionAssert.AreEqual(reference, result);
+        }
+
+        [TestMethod]
         public void EncodeContextSpecificSequenceOfPoints()
         {
             var asn = AsnObject.Sequence(

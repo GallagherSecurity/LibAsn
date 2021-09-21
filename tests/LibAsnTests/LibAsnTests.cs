@@ -137,19 +137,6 @@ namespace Gallagher.LibAsn
         }
 
         [TestMethod]
-        public void EncodeSimpleSequenceOfPoints()
-        {
-            // Point with only an x coordinate of 9 like so (30 means SEQUENCE here):
-            var reference = new byte[] { 0x30, 0x06, 0x02, 0x01, 0x09, 0x02, 0x01, 0x0a };
-            var asn = AsnObject.Sequence(
-                AsnObject.Integer(new byte[] { 9 }),
-                AsnObject.Integer(new byte[] { 10 }));
-
-            var result = asn.DerEncode();
-            CollectionAssert.AreEqual(reference, result);
-        }
-
-        [TestMethod]
         public void EncodeContextSpecificSequenceOfPoints()
         {
             var asn = AsnObject.Sequence(
@@ -348,6 +335,20 @@ namespace Gallagher.LibAsn
             var d2 = AsnObject.DecodeGeneralizedTime(t2);
 
             Assert.AreEqual(new DateTime(2022, 07, 15, 6, 24, 47, DateTimeKind.Utc), d2);
+        }
+
+        [TestMethod]
+        public void EncodeUnsignedInteger()
+        {
+            uint noPaddingRequired = 1496159503; // 0x0f, 0x95, 0x2d, 0x59
+            var u1 = AsnObject.UnsignedInteger(noPaddingRequired).DerEncode();
+
+            CollectionAssert.AreEqual(new byte[] { 0x02, 0x04, 0x0f, 0x95, 0x2d, 0x59 }, u1);
+
+            uint paddingRequired = 1496159647; // 0x9f, 0x95, 0x2d, 0x59
+            var u2 = AsnObject.UnsignedInteger(paddingRequired).DerEncode();
+
+            CollectionAssert.AreEqual(new byte[] { 0x02, 0x05, 0x00, 0x9f, 0x95, 0x2d, 0x59 }, u2);
         }
 
         [TestMethod]

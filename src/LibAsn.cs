@@ -202,19 +202,21 @@ namespace Gallagher.LibAsn
         // convenience helper for creating integers
         public static AsnObject Integer(int value) => new AsnObject(AsnTag.Simple.Integer, BitConverter.GetBytes(value));
 
+        // convenience helper for creating unsigned integers
+        // Note this will always require 4 bytes to encode even a single digit value, which is technically wrong.
+        // need to come back and make this work properly and add unit tests
+        public static AsnObject UnsignedInteger(uint value) => UnsignedInteger(BitConverter.GetBytes(value));
+
         // convenience helper for creating unsigned integers. Not particularly efficient but it'll do
-        public static AsnObject UnsignedInteger(uint value)
+        public static AsnObject UnsignedInteger(byte[] value)
         {
-            // Note this will always require 4 bytes to encode even a single digit value, which is technically wrong.
-            // need to come back and make this work properly and add unit tests
-            var bytes = BitConverter.GetBytes(value);
-            if ((bytes[0] & 0x80) != 0) // high bit is set on an unsigned integer which means this would be interpreted as a negative int
+            if ((value[0] & 0x80) != 0) // high bit is set on an unsigned integer which means this would be interpreted as a negative int
             {
-                var unsignedBytes = new byte[bytes.Length + 1]; // force a leading 0 byte
-                bytes.CopyTo(unsignedBytes, 1);
+                var unsignedBytes = new byte[value.Length + 1]; // force a leading 0 byte
+                value.CopyTo(unsignedBytes, 1);
                 return new AsnObject(AsnTag.Simple.Integer, unsignedBytes);
             }
-            return new AsnObject(AsnTag.Simple.Integer, bytes);
+            return new AsnObject(AsnTag.Simple.Integer, value);
         }
 
         // convenience helper for creating a UtcTime. Converts the time to UTC if it is not already.

@@ -351,6 +351,20 @@ namespace Gallagher.LibAsn
         }
 
         [TestMethod]
+        public void EncodeUnsignedInteger()
+        {
+            uint noPaddingRequired = 1496159503; // 0x0f, 0x95, 0x2d, 0x59
+            var u1 = AsnObject.UnsignedInteger(noPaddingRequired).DerEncode();
+
+            CollectionAssert.AreEqual(new byte[] { 0x02, 0x04, 0x0f, 0x95, 0x2d, 0x59 }, u1);
+
+            uint paddingRequired = 1496159647; // 0x9f, 0x95, 0x2d, 0x59
+            var u2 = AsnObject.UnsignedInteger(paddingRequired).DerEncode();
+
+            CollectionAssert.AreEqual(new byte[] { 0x02, 0x05, 0x00, 0x9f, 0x95, 0x2d, 0x59 }, u2);
+        }
+
+        [TestMethod]
         public void PrintOutputsCorrectly_BasicType()
         {
             var asn = AsnObject.Sequence(
